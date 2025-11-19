@@ -41,7 +41,7 @@ async def entrypoint(ctx: agents.JobContext):
     # Memory functionality with graceful fallback
     mem0_client = None
     initial_ctx = ChatContext()
-    memory_str = ''
+    initial_memory_ids = set()
     
     try:
         # Initialize Mem0 client if credentials are available
@@ -71,10 +71,13 @@ async def entrypoint(ctx: agents.JobContext):
                 ]
                 memory_str = json.dumps(memories)
                 logging.info(f"Retrieved {len(results)} memories from Mem0")
-                initial_ctx.add_message(
+                
+                # Add to context and store IDs
+                msg = initial_ctx.add_message(
                     role="assistant",
                     content=f"The user's name is {user_name}, and this is relevant context about him: {memory_str}."
                 )
+                initial_memory_ids.add(msg.id)
             else:
                 logging.info("No existing memories found")
         else:
@@ -91,25 +94,26 @@ async def entrypoint(ctx: agents.JobContext):
             
         try:
             # Get the chat context from the session
-            chat_ctx = session._agent.chat_ctx
-            messages_formatted = []
+            chat_ctx = session.chat_context()
+            messages_to_save = []
             
             for item in chat_ctx.items:
+                # Skip messages that were part of the initial memory load
+                if item.id in initial_memory_ids:
+                    continue
+                
+                # Ensure content is a string
                 content_str = ''.join(item.content) if isinstance(item.content, list) else str(item.content)
                 
-                # Skip if this content was part of the initial memory
-                if memory_str and memory_str in content_str:
-                    continue
-                    
                 if item.role in ['user', 'assistant']:
-                    messages_formatted.append({
+                    messages_to_save.append({
                         "role": item.role,
                         "content": content_str.strip()
                     })
             
-            if messages_formatted:
-                await mem0_client.add(messages_formatted, user_id="Masum")
-                logging.info(f"Saved {len(messages_formatted)} new messages to memory")
+            if messages_to_save:
+                await mem0_client.add(messages_to_save, user_id="Masum")
+                logging.info(f"Saved {len(messages_to_save)} new messages to memory")
             
         except Exception as e:
             logging.warning(f"Failed to save memories on shutdown: {e}")

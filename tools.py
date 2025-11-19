@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from livekit.agents import function_tool, RunContext
 import requests
@@ -15,9 +16,12 @@ async def get_weather(
     """
     Get the current weather for a given city.
     """
+    loop = asyncio.get_event_loop()
     try:
-        response = requests.get(
-            f"https://wttr.in/{city}?format=3")
+        response = await loop.run_in_executor(
+            None, 
+            lambda: requests.get(f"https://wttr.in/{city}?format=3")
+        )
         if response.status_code == 200:
             logging.info(f"Weather for {city}: {response.text.strip()}")
             return response.text.strip()   
@@ -35,8 +39,12 @@ async def search_web(
     """
     Search the web using DuckDuckGo.
     """
+    loop = asyncio.get_event_loop()
     try:
-        results = DuckDuckGoSearchRun().run(tool_input=query)
+        results = await loop.run_in_executor(
+            None,
+            lambda: DuckDuckGoSearchRun().run(tool_input=query)
+        )
         logging.info(f"Search results for '{query}': {results}")
         return results
     except Exception as e:
@@ -60,44 +68,12 @@ async def send_email(
         message: Email body content
         cc_email: Optional CC email address
     """
+    loop = asyncio.get_event_loop()
     try:
-        # Gmail SMTP configuration
-        smtp_server = "smtp.gmail.com"
-        smtp_port = 587
-        
-        # Get credentials from environment variables
-        gmail_user = os.getenv("GMAIL_USER")
-        gmail_password = os.getenv("GMAIL_APP_PASSWORD")  # Use App Password, not regular password
-        
-        if not gmail_user or not gmail_password:
-            logging.error("Gmail credentials not found in environment variables")
-            return "Email sending failed: Gmail credentials not configured."
-        
-        # Create message
-        msg = MIMEMultipart()
-        msg['From'] = gmail_user
-        msg['To'] = to_email
-        msg['Subject'] = subject
-        
-        # Add CC if provided
-        recipients = [to_email]
-        if cc_email:
-            msg['Cc'] = cc_email
-            recipients.append(cc_email)
-        
-        # Attach message body
-        msg.attach(MIMEText(message, 'plain'))
-        
-        # Connect to Gmail SMTP server
-        server = smtplib.SMTP(smtp_server, smtp_port)
-        server.starttls()  # Enable TLS encryption
-        server.login(gmail_user, gmail_password)
-        
-        # Send email
-        text = msg.as_string()
-        server.sendmail(gmail_user, recipients, text)
-        server.quit()
-        
+        await loop.run_in_executor(
+            None,
+            lambda: _send_email_sync(to_email, subject, message, cc_email)
+        )
         logging.info(f"Email sent successfully to {to_email}")
         return f"Email sent successfully to {to_email}"
         
@@ -110,3 +86,40 @@ async def send_email(
     except Exception as e:
         logging.error(f"Error sending email: {e}")
         return f"An error occurred while sending email: {str(e)}"
+
+def _send_email_sync(to_email, subject, message, cc_email):
+    # Gmail SMTP configuration
+    smtp_server = "smtp.gmail.com"
+    smtp_port = 587
+    
+    # Get credentials from environment variables
+    gmail_user = os.getenv("GMAIL_USER")
+    gmail_password = os.getenv("GMAIL_APP_PASSWORD")  # Use App Password, not regular password
+    
+    if not gmail_user or not gmail_password:
+        raise ValueError("Gmail credentials not found in environment variables")
+    
+    # Create message
+    msg = MIMEMultipart()
+    msg['From'] = gmail_user
+    msg['To'] = to_email
+    msg['Subject'] = subject
+    
+    # Add CC if provided
+    recipients = [to_email]
+    if cc_email:
+        msg['Cc'] = cc_email
+        recipients.append(cc_email)
+    
+    # Attach message body
+    msg.attach(MIMEText(message, 'plain'))
+    
+    # Connect to Gmail SMTP server
+    server = smtplib.SMTP(smtp_server, smtp_port)
+    server.starttls()  # Enable TLS encryption
+    server.login(gmail_user, gmail_password)
+    
+    # Send email
+    text = msg.as_string()
+    server.sendmail(gmail_user, recipients, text)
+    server.quit()
