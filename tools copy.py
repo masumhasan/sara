@@ -5,11 +5,9 @@ import requests
 from langchain_community.tools import DuckDuckGoSearchRun
 import os
 import smtplib
-from email.mime.multipart import MIMEMultipart
+from email.mime.multipart import MIMEMultipart  
 from email.mime.text import MIMEText
 from typing import Optional
-from mem0 import AsyncMemoryClient
-import json
 
 @function_tool()
 async def get_weather(
@@ -125,52 +123,3 @@ def _send_email_sync(to_email, subject, message, cc_email):
     text = msg.as_string()
     server.sendmail(gmail_user, recipients, text)
     server.quit()
-
-@function_tool()
-async def add_memory(
-    context: RunContext,  # type: ignore
-    memory: str
-) -> str:
-    """
-    Adds a memory to the user's profile. Use this to remember key facts,
-    preferences, or any important information about the user.
-    """
-    try:
-        mem0_client = AsyncMemoryClient(
-            api_key=os.getenv("MEM0_API_KEY"),
-            project_id=os.getenv("MEM0_PROJECT_ID"),
-            org_id=os.getenv("MEM0_ORG_ID")
-        )
-        # mem0 add expects a list of dicts; wrap the memory string accordingly
-        await mem0_client.add([{"memory": memory}], user_id="Masum")
-        logging.info(f"Added memory for Masum: {memory}")
-        return f"Memory added successfully for Masum."
-    except Exception as e:
-        logging.error(f"Error adding memory: {e}")
-        return f"An error occurred while adding memory."
-
-@function_tool()
-async def search_memory(
-    context: RunContext,  # type: ignore
-    query: str
-) -> str:
-    """
-    Searches the user's memory to retrieve information based on a query.
-    Use this to recall facts, preferences, or past conversations.
-    """
-    try:
-        mem0_client = AsyncMemoryClient(
-            api_key=os.getenv("MEM0_API_KEY"),
-            project_id=os.getenv("MEM0_PROJECT_ID"),
-            org_id=os.getenv("MEM0_ORG_ID")
-        )
-        results = await mem0_client.search(query, user_id="Masum")
-        if not results:
-            return "No relevant memories found."
-        
-        memories = [result["memory"] for result in results]
-        logging.info(f"Found memories for query '{query}': {memories}")
-        return json.dumps(memories)
-    except Exception as e:
-        logging.error(f"Error searching memory: {e}")
-        return f"An error occurred while searching memory."

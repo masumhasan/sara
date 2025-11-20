@@ -10,30 +10,43 @@ mem0 = MemoryClient()
 
 def add_memory():
     
-    messages_formatted = [
-        {        "role": "user",
-            "content": "I really like Linkin Park."
-        },
-        {
-            "role": "assistant",
-            "content": "That is a good choice."
-        },
+    # Memory for Masum
+    masum_messages = [
         {
             "role": "user",
-            "content": "I think so too."
+            "content": "My favorite movie is Interstellar."
         },
         {
             "role": "assistant",
-            "content": "What is your favorite song by them?"
-        },
+            "content": "That's a great choice, a modern sci-fi classic."
+        }
     ]
+    mem0.add(masum_messages, user_id="Masum")
+    print("Added memory for Masum.")
 
-    mem0.add(messages_formatted, user_id="Masum")
+    # Memory for Liza
+    liza_messages = [
+        {
+            "role": "user",
+            "content": "I enjoy painting in my free time."
+        },
+        {
+            "role": "assistant",
+            "content": "That's a wonderful hobby! What do you like to paint?"
+        }
+    ]
+    mem0.add(liza_messages, user_id="Liza")
+    print("Added memory for Liza.")
 
-def get_memory_by_query():
+
+def get_memory_by_query(user_name: str):
     mem0 = MemoryClient()
-    query = "What are {user_name}'s preferences?"
+    query = f"What are {user_name}'s preferences and hobbies?"
     results = mem0.search(query, user_id=user_name)
+
+    if not results:
+        print(f"No memories found for {user_name} with query: {query}")
+        return "[]"
 
     memories = [
             {
@@ -42,11 +55,15 @@ def get_memory_by_query():
             }
             for result in results
         ]
-    memories_str = json.dumps(memories)
-    print(f"Memories: {memories_str}")
+    memories_str = json.dumps(memories, indent=2)
+    print(f"Memories for {user_name}: {memories_str}")
     return memories_str
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    get_memory_by_query()
+    add_memory()
+    print("\n--- Getting memories for Masum ---")
+    get_memory_by_query(user_name="Masum")
+    print("\n--- Getting memories for Liza ---")
+    get_memory_by_query(user_name="Liza")
