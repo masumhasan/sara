@@ -94,7 +94,7 @@ async def entrypoint(ctx: agents.JobContext):
             
         try:
             # Get the chat context from the session
-            chat_ctx = session.chat_context()
+            chat_ctx = session.agent.chat_ctx
             messages_to_save = []
             
             for item in chat_ctx.items:
@@ -118,9 +118,7 @@ async def entrypoint(ctx: agents.JobContext):
         except Exception as e:
             logging.warning(f"Failed to save memories on shutdown: {e}")
 
-    session = AgentSession(
-        
-    )
+    session: AgentSession[Assistant] = AgentSession()
 
     await session.start(
         room=ctx.room,

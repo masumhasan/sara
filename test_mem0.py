@@ -2,68 +2,56 @@ from dotenv import load_dotenv
 from mem0 import MemoryClient
 import logging
 import json
-
+import uuid
 
 load_dotenv()
-user_name = 'Masum'
-mem0 = MemoryClient()
 
-def add_memory():
-    
-    # Memory for Masum
-    masum_messages = [
-        {
-            "role": "user",
-            "content": "My favorite movie is Interstellar."
-        },
-        {
-            "role": "assistant",
-            "content": "That's a great choice, a modern sci-fi classic."
-        }
-    ]
-    mem0.add(masum_messages, user_id="Masum")
-    print("Added memory for Masum.")
-
-    # Memory for Liza
-    liza_messages = [
-        {
-            "role": "user",
-            "content": "I enjoy painting in my free time."
-        },
-        {
-            "role": "assistant",
-            "content": "That's a wonderful hobby! What do you like to paint?"
-        }
-    ]
-    mem0.add(liza_messages, user_id="Liza")
-    print("Added memory for Liza.")
-
-
-def get_memory_by_query(user_name: str):
+def test_single_insertion(user_id: str, content: str):
+    """
+    Tests adding a single piece of memory and verifies it was inserted.
+    """
+    print(f"\n--- Testing memory insertion for user: {user_id} ---")
     mem0 = MemoryClient()
-    query = f"What are {user_name}'s preferences and hobbies?"
-    results = mem0.search(query, user_id=user_name)
+    
+    # 1. Add a unique memory
+    messages = [{"role": "user", "content": content}]
+    print(f"Attempting to add memory: '{content}'")
+    try:
+        mem0.add(messages, user_id=user_id)
+        print("Memory added successfully via API.")
+    except Exception as e:
+        print(f"Error adding memory: {e}")
+        return
 
-    if not results:
-        print(f"No memories found for {user_name} with query: {query}")
-        return "[]"
+    # 2. Verify the memory was inserted
+    print("Verifying insertion...")
+    try:
+        all_memories = mem0.get_all(user_id=user_id)
+        if not all_memories:
+            print("Verification failed: No memories found for user.")
+            return
 
-    memories = [
-            {
-                "memory": result["memory"],
-                "updated_at": result["updated_at"]
-            }
-            for result in results
-        ]
-    memories_str = json.dumps(memories, indent=2)
-    print(f"Memories for {user_name}: {memories_str}")
-    return memories_str
+        # Check if a memory containing the unique content exists
+        found = any(content in mem.get("memory", "") for mem in all_memories)
+
+        if found:
+            print("Verification successful: The new memory was found.")
+        else:
+            print("Verification failed: The new memory was not found in the user's history.")
+        
+        print("Current memories for user:")
+        print(json.dumps(all_memories, indent=2))
+
+    except Exception as e:
+        print(f"Error retrieving memories for verification: {e}")
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    add_memory()
-    print("\n--- Getting memories for Masum ---")
-    get_memory_by_query(user_name="Masum")
-    print("\n--- Getting memories for Liza ---")
-    get_memory_by_query(user_name="Liza")
+    
+    # Generate unique content for this test run
+    masum_unique_fact = f"Masum's secret code is {uuid.uuid4()}."
+    liza_unique_fact = f"Liza's favorite flower is the sunflower."
+
+    test_single_insertion(user_id="Masum", content=masum_unique_fact)
+    test_single_insertion(user_id="Liza", content=liza_unique_fact)
