@@ -23,10 +23,31 @@ memory = agent.get_memory()
 print(memory)  # Output: ['Hello']
 ```
 
+## Setup
+
+Create and activate a virtual environment:
+
+```bash
+# Create virtual environment
+python -m venv .venv
+
+# Activate virtual environment
+# On Linux/Mac:
+source .venv/bin/activate
+# On Windows:
+.venv\Scripts\activate
+```
+
 ## Running the Example
 
 ```bash
 python agent.py
+```
+
+## Running Tests
+
+```bash
+python -m unittest test_agent.py -v
 ```
 
 ## Features
